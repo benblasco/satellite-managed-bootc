@@ -12,35 +12,8 @@ Background and concepts: [Provisioning image mode for RHEL using Satellite](http
 
 The provisioning steps later in this document assume bootc content is available on Satellite: a synced upstream bootc registry (optional source material) and a custom image pushed to the Satellite container registry and exposed through a content view. The following subsections are imported from the Joplin note *Image Builder for Image mode hosts using satellite* (**Sync the RHEL 10 bootc registry from RH** and **Push to Satellite registry**).
 
-### Sync the RHEL 10 bootc registry from RH
 
-Content -> Products -> Repo Discovery
-
-![cdac2a67aa949010bed94e722c09a592.png](satellite-bootc-images/47bcc6154add4898898b69fe5ca04651.png)
-
-
-![0bb2094a3cff3748b7e94b73dfc55daf.png](satellite-bootc-images/756f675d243c467f975f26ec976f9432.png)
-
-
-Ensure you download on demand, not immediate.
-
-Sync the repo
-
-![ef99ad3c07d0d174cf33a21affa5b978.png](satellite-bootc-images/61d595f6ae26421dbdd153748aa31359.png)
-
-### Push to Satellite registry
-
-1. Create a custom product
-  [3.6.1. Creating a custom product by using Satellite web UI](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/adding-content-to-satellite#creating-a-custom-product-by-using-web-ui)
-2. ~~Create a registry repository~~ Not necessary because the first push creates the repo
-
-![Create custom product](satellite-bootc-images/a025aac1bbd649b9b7eb6ec857cb4950.png)
-
-![Create custom product (continued)](satellite-bootc-images/1cd5b414b75b434a820c8f39a9735dcb.png)
-
-![Registry repository note](satellite-bootc-images/fff262e63a814695a84007e021698306.png)
-
-![Registry repository note (continued)](satellite-bootc-images/2d5ee69173d74d099ae47eda7e9fe671.png)
+### Push the built image to Satellite
 
 1. Push the built image to Satellite
 
