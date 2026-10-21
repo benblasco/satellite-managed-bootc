@@ -44,13 +44,13 @@ This step is not strictly mandatory if a build host has internet access to pull 
 
 ## Deploy and configure a build host
 
-The build host, running the latest version of the Image Builder tool (available in RHEL 10.2+ and 9.8+), is used to build the customised bootc images and push them to the registry in Satellite. 
+The build host is used to build the customised bootc images and push them to the registry in Satellite. 
 
 The steps are:
 
 1. Create a Lifecycle Environment (LCE) (path) and Content View (CV) to be used by the build host and control the content in the bootc images that will be built.
 2. Deploy a build host within that LCE
-3. Install the tools required for the build
+3. Install the tools required for the build on the build host
 4. ~~Build the customised bootc image via your Containerfile~~
 5. ~~Push the image to the registry in Satellite~~
 
@@ -60,5 +60,29 @@ The steps are:
 
 Note: This section is very brief as it is following normal procedures for managing package mode hosts in Satellite.
 
-1. Create a LCE for the build environment. It is only necessary to create a single build environment unless historical builds need to be reproduced for some reason (I can't think of). The example below is using the existing SOE10 `Development` environment. The `Qualification` and `Production` environments are redundant in this context.  
+1. Create a LCE for the build environment.
+  It is only necessary to create a single build environment unless historical builds need to be reproduced for some reason (I can't think of). The example below is using the existing SOE10 `Development` environment. The `Qualification` and `Production` environments are redundant in this context.  
   ![Build host LCE.png](satellite-bootc-images/build_host_lce.png)
+
+2. Create a CV for the build environment.
+  The CV must contain: 
+  - RHEL and other repositories hosting all content required by the build host
+  - RHEL kickstart repositories used to deploy the build host
+  - Any other repositories containing content that will be added to the bootc images being built. Below is my example SOE10 CV along with the filters in use.
+  Note: Neither the bootc base image repository, nor the built image repository are included in the CV (Why?).
+  ![Build host CV.png](satellite-bootc-images/build_host_cv.png)
+  ![Build host CV filters.png](satellite-bootc-images/build_host_cv_filters.png)
+
+## Deploy a build host within that LCE
+
+Deploy a build host using Satellite's kickstart-based provisioning procedure into the environment of your choice.
+
+## Install the tools required for the build
+
+The build host requires set of container tools (which include podman, buildah, and skopeo) to be able to build images. These can be installed via the `container-tools` meta package.
+
+```
+sudo dnf install -y container-tools
+```
+
+Note: The versions of the packages installed will be in line with what is made available by the version of the CV currently associated with the host.
