@@ -108,7 +108,10 @@ The most important part here is that the bootc base image needs to be _older_ th
   ```
 
   5. Push to the container registry
+  [14.3.4. Pushing container images to Satellite](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#pushing-container-images-to-satellite)
+
   ```
+  # podman push My_Container_Image_ID satellite.example.com/My_Organization_Label/My_Product_Label/My_Repository_Name[:My_Tag]
   podman push satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:20261019 .
   ```
 

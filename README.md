@@ -2,7 +2,7 @@
 
 Internal runbook for provisioning **RHEL image mode (bootc)** VMs with **Red Hat Satellite** (`satellite1.savage.test`), **Anaconda kickstart**, and the **nuc** libvirt compute resource on `savage.test`.
 
-Background and concepts: [Provisioning image mode for RHEL using Satellite](https://developers.redhat.com/articles/2026/08/06/image-mode-for-rhel-with-anaconda-and-satellite).
+Much of the background and concept came from Ian Ballou's great article: [Provisioning image mode for RHEL using Satellite](https://developers.redhat.com/articles/2026/08/06/image-mode-for-rhel-with-anaconda-and-satellite).
 
 **Validated in this lab:** `fail07.savage.test` completed build and booted successfully using the configuration below.
 
