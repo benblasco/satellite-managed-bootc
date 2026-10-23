@@ -6,12 +6,20 @@ Once a bootc container image has been pushed to Satellite's registry, it becomes
 
 The instructions below use network provisioning and the Anaconda Installer's kickstart capability to deploy VMs that pull the bootc image from Satellite's registry and lay it down on disk.
 
+### Prerequisites (infrastructure)
+
+Before creating lifecycle environments, content views, or host groups, confirm:
+
+- Satellite provides **managed DHCP, DNS, and TFTP** for the provisioning subnet.
+- Per-host PXE config is deployed under `/var/lib/tftpboot/pxelinux.cfg/` (e.g. `01-<mac-with-dashes>`).
+- Provisioning network: `savage.test` (example DNS `192.168.140.5`, gateway `192.168.140.1`).
+
 The high level steps to enable deployment of bootc-based VMs are:
 
 1. Create a lifecycle environment (path) for the VMs
 2. Create a content view to allow network provisioning and access to the right container image(s)
-3. Create the bootc-specific provisioning kickstart template
-4. Create an activation key
+3. Create an activation key for that lifecycle environment and content view
+4. Create the bootc-specific provisioning kickstart template
 5. Create a host group to pull all the required configurations together
 6. Add custom parameters to the host group
 7. Provision a new bootc VM
@@ -22,13 +30,13 @@ The high level steps to enable deployment of bootc-based VMs are:
 
 ## Provisioning flow overview
 
-Network provisioning chains several Foreman **template kinds**. Only the **provision** kickstart is customized for bootc; PXE boot still uses the operating system's default **SOE Kickstart Default PXELinux** template.
+Network provisioning chains several Foreman **template kinds**. Only the **provision** kickstart is customised for bootc; PXE boot still uses the operating system's default **SOE Kickstart Default PXELinux** template.
 
 End-to-end flow:
 
 1. Host PXE-boots; **PXELinux** supplies kernel/initrd, `inst.ks`, static IP, and `inst.stage2` (kickstart install tree).
 2. Anaconda downloads and runs the rendered `kickstart_bootc_rhel10` provision template.
-3. `ostreecontainer` pulls the  bootc image from the Satellite container registry and deploys to disk.
+3. `ostreecontainer` pulls the bootc image from the Satellite container registry and deploys to disk.
 4. `%post` registers the host (subscription-manager / Satellite snippets), installs remote-execution keys, and POSTs to Foreman `/unattended/built` (or `failed`).
 
 ```mermaid
@@ -65,13 +73,26 @@ flowchart LR
   Optionally (but not shown here) you can also create filters on the kickstart repository as per regular package mode practices.
   ![Content view filter on tag](satellite-bootc-images/c0d9f72d2af14ff892cd0a7e8043bd97.png)
 
+Sync the repositories, publish the content view, and promote it to the target lifecycle environment (for example **`bootc_dev`**) before creating hosts.
+
 ---
 
+## Create the activation key
 
+Create the activation key **after** the lifecycle environment and content view exist, because the key is bound to that LCE/CV pair.
+
+1. Navigate to **Content -> Lifecycle -> Activation Keys** and create a key (for example **`bootc_rhel10_dev`**).
+2. Set **Lifecycle environment** to **`bootc_dev`** and **Content view** to **`bootc_rhel10`** (the deploy CV from the previous section).
+3. Configure repository sets and any other options to match your environment; use the screenshots below as a reference.
+
+  ![Activation Key details](satellite-bootc-images/activation_key_create.png)
+  ![Activation Key repository sets](satellite-bootc-images/activation_key_repository_sets.png)
+
+---
 
 ## Create a bootc-specific kickstart template
 
-The example kickstart template in this repository, which can be found [here](files/kickstart_bootc_rhel10.ks), is a very lightly modified version of the template provided in the previously linked article [Provisioning image mode for RHEL using Satellite](https://developers.redhat.com/articles/2026/08/06/image-mode-for-rhel-with-anaconda-and-satellite).
+The example kickstart in [files/kickstart_bootc_rhel10.ks](files/kickstart_bootc_rhel10.ks) is a lightly modified version of the template from [Provisioning image mode for RHEL using Satellite](https://developers.redhat.com/articles/2026/08/06/image-mode-for-rhel-with-anaconda-and-satellite). **Read and review it**, adapt registry names, snippets, and parameters for your Satellite, then create or paste the result as a provisioning template in Foreman—it is not imported automatically from this repository.
 
 The key differences are:
 
@@ -85,10 +106,10 @@ The key differences are:
 
 PXE templates (**SOE Kickstart Default PXELinux**, etc.) remain the OS defaults; that is expected.
 
-### Template behavior (summary)
+### Template behaviour (summary)
 
 
-| Area         | Behavior                                                                                          |
+| Area         | Behaviour                                                                                         |
 | ------------ | ------------------------------------------------------------------------------------------------- |
 | Network      | `kickstart_network_interface` snippet per interface                                               |
 | Pre-install  | Conditional `%pre` when `bootc_registry_auth_b64` is set (TLS + auth)                             |
@@ -97,11 +118,7 @@ PXE templates (**SOE Kickstart Default PXELinux**, etc.) remain the OS defaults;
 | Installer UI | `text` and `skipx`                                                                                |
 | Post-install | `redhat_register`, `remote_execution_ssh_keys`, Foreman `built` / `failed` via `install.post.log` |
 
-## Create the activation key
-
-1. Navigate to Content -> Lifecycle -> Activation Keys and create an activation key with the following settings:
-  ![Activation Key details](satellite-bootc-images/activation_key_create.png)
-  ![Activation Key repository sets](satellite-bootc-images/activation_key_repository_sets.png)
+---
 
 ## Create the host group
 
@@ -114,7 +131,7 @@ Host group values
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Organization / location    | Default Organization / Default Location                                                                       |
 | Compute resource           | `nuc` (libvirt)                                                                                               |
-| Operating system           | RHEL 10.0 / 10.1 / 10.2) |
+| Operating system           | RHEL 10.0 / 10.1 / 10.2 |
 | Lifecycle environment      | `bootc_dev`                                                                                                   |
 | Content view               | `bootc_rhel10`                                                                                                |
 | Kickstart repository       | Red Hat Enterprise Linux 10 for x86_64 - BaseOS Kickstart **10.1** (repo id **911**)                          |
@@ -136,17 +153,11 @@ Host group values
 
 Note: The kickstart and container content must be **synced** and the content view **promoted** to `bootc_dev` before provisioning.
 
-### Infrastructure assumptions
-
-- Satellite provides **managed DHCP, DNS, and TFTP** for the provisioning subnet.
-- Per-host PXE config is deployed under `/var/lib/tftpboot/pxelinux.cfg/` (e.g. `01-<mac-with-dashes>`).
-- Provisioning network: `savage.test` (example DNS `192.168.140.5`, gateway `192.168.140.1`).
-
 ## Add custom parameters to the host group
 
 These parameters are injected into the kickstart to fit this particular environment.
 
-1. Configure the following on **Hosts → Host groups →** `hg_x86_64_bootc_rhel10_vm` **→ Parameters** (ie the same host group as the previous step):
+1. Configure the following on **Hosts -> Host groups ->** `hg_x86_64_bootc_rhel10_vm` **-> Parameters** (i.e., the same host group as the previous step):
 
 | Parameter                         | Type   | Purpose                                                                                                                                                                               |
 | --------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -165,7 +176,7 @@ These parameters are injected into the kickstart to fit this particular environm
 ["inst.stage2=http://satellite1.savage.test/pulp/content/Default_Organization/bootc_dev/bootc_rhel10/content/dist/rhel10/10.1/x86_64/baseos/kickstart/"]
 ```
 
-Derive this URL from the kickstart repository's pulp path in Satellite (**Content → Lifecycle Environments → bootc_dev → bootc_rhel10**), or from the repository **Published at** / download URL for the BaseOS kickstart repo in that CV. The path must include `bootc_dev/bootc_rhel10`, not `Library`.
+Derive this URL from the kickstart repository's pulp path in Satellite (**Content -> Lifecycle Environments -> bootc_dev -> bootc_rhel10**), or from the repository **Published at** / download URL for the BaseOS kickstart repo in that CV. The path must include `bootc_dev/bootc_rhel10`, not `Library`.
 
 ### Registry authentication (`bootc_registry_auth_b64`)
 
@@ -203,22 +214,18 @@ Use the same user/password and image reference as in the host group parameters.
 
 ## Provisioning a new bootc VM
 
-1. Navigate to **Hosts → Create host**:
-  ![VM name and host group](bootc_create.png)
-  ![VM CPU/memory/storage](bootc_vm_create_vm.png)
-  ![VM OS definition](bootc_create_vm_os.png)
-  ![VM network parameters](bootc_vm_create_network.png)
-
-1. **Hosts → Create host** (or bulk): assign `hg_x86_64_bootc_rhel10_vm`, libvirt on **nuc**, synced kickstart media, content view `bootc_rhel10` / LE `bootc_dev`, enable **Build**.
-2. **Verify rendered kickstart:** host **Templates** tab, or from Satellite:
-  `GET /unattended/provision?static=1&token=<host-token>`  
+1. In **Hosts -> Create host**, assign host group **`hg_x86_64_bootc_rhel10_vm`**, compute resource **nuc** (libvirt), content view **`bootc_rhel10`** / lifecycle environment **`bootc_dev`**, and enable **Build**. Complete name, CPU, memory, storage, OS, and network as needed:
+  ![VM name and host group](satellite-bootc-images/bootc_vm_create.png)
+  ![VM CPU/memory/storage](satellite-bootc-images/bootc_vm_create_vm.png)
+  ![VM OS definition](satellite-bootc-images/bootc_create_vm_os.png)
+  ![VM network parameters](satellite-bootc-images/bootc_create_vm_network.png)
+2. **Verify rendered kickstart** on the host **Templates** tab, or from Satellite:
+   `GET /unattended/provision?static=1&token=<host-token>`  
    Confirm: `ostreecontainer --url`, optional `%pre`, network stanza, no `url`/`repo` for install source.
-3. **Verify PXE:** on Satellite, inspect
-  `/var/lib/tftpboot/pxelinux.cfg/01-<mac>`  
-   **APPEND** should include `inst.ks=...` and `inst.stage2=...bootc_dev/bootc_rhel10...`.
-4. Power on / build; wait for install to finish.
-5. **On the guest:** `bootc status` — booted image should match `ostreecontainer`.
-6. **In Foreman:** build flag clears after successful `/unattended/built` callback.
+3. **Verify PXE** on Satellite: inspect `/var/lib/tftpboot/pxelinux.cfg/01-<mac>` — **APPEND** should include `inst.ks=...` and `inst.stage2=...bootc_dev/bootc_rhel10...`.
+4. Power on the host and wait for the install to finish.
+5. **On the guest:** `bootc status` — booted image should match the `ostreecontainer` host parameter.
+6. **In Foreman:** the build flag clears after a successful `/unattended/built` callback.
 
 ---
 
@@ -231,8 +238,9 @@ Install runs on hypervisor **nuc** (`nuc.lan`). During install the kickstart use
 
 | Method                     | How                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Satellite UI               | Host → **Console**                                                                                                                                 |
-| VNC display                | On nuc: `sudo virsh vncdisplay <fqdn.savage.test>` → e.g. `:4` means TCP port **5904** (`5900 + display number`). Client: `nuc.lan:5904`           |
+| Satellite UI               | Host -> **Console**                                                                                                                                |
+| Remote VNC (virt-viewer)   | From your workstation (SSH to libvirt on the hypervisor): `virt-viewer --connect qemu+ssh://bblasco@nuc.lan/system fail07.savage.test` — use the guest’s Foreman FQDN as the domain name |
+| VNC display                | On nuc: `sudo virsh vncdisplay <fqdn.savage.test>`; e.g. `:4` means TCP port **5904** (`5900 + display number`). Client: `nuc.lan:5904`              |
 | VNC password               | On nuc: `sudo virsh dumpxml --security-info <fqdn>` (VNC password may not appear in saved domain XML without security info)                        |
 | Post-install script output | Template runs `%post` with `exec < /dev/tty3` and `chvt 3` — useful text may be on **virtual console 3**; switch VT in the VNC client if supported |
 | Serial console             | `sudo virsh console <fqdn>` — usually **no output** unless `console=ttyS0` (or similar) is added to PXE kernel options                             |
@@ -247,26 +255,19 @@ A blank VNC screen during early dracut or quiet install is **normal**. Use scree
 
 ## Verification and maintenance
 
-- `ostreecontainer`**:** Update the image **tag** on the host group when you publish and promote a new bootc tag in Satellite.
+### Publish and promote container images via image tags
+
+Use this workflow after you build and `podman push` a new tag (see [README-build-image.md](README-build-image.md)).
+
+1. **Sync** the `bootc_rhel10` container repository in Satellite if the new tag is not visible yet (**Content → Products → bootc_images → bootc_rhel10 → Sync**).
+2. If the deploy content view **`bootc_rhel10`** uses a **tag filter**, add or adjust the filter so the new tag is included, then **publish** a new content view version.
+3. **Promote** that version to lifecycle environment **`bootc_dev`** (the LE used by the bootc host group).
+4. On host group **`hg_x86_64_bootc_rhel10_vm`**, update the **`ostreecontainer`** parameter to the full image reference including the new tag, for example `satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:20261019`. Note: This should be parametrised to make this step redundant.
+5. **Pre-flight** (optional): from a host that trusts the Satellite CA, `podman pull` the same reference you set on `ostreecontainer`.
+6. **Provision** new hosts (or rebuild) so Anaconda pulls the promoted tag. Existing guests already installed are not changed until you re-deploy or use bootc upgrade flows outside this guide.
+
+- `ostreecontainer`**:** Same as step 4 above when you ship a new image tag.
 - `inst.stage2`**:** If lifecycle environment, content view, or kickstart repo version changes, update `kickstart_kernel_custom_options` to match the new pulp kickstart path.
-- **OS minor version:** Host may be registered as RHEL 10.2 while `inst.stage2` points at the **10.1** kickstart tree in the CV; keep the stage2 URL aligned with the kickstart repo actually in `bootc_dev/bootc_rhel10`.
+- **OS minor version:** Ideally match `inst.stage2` to the kickstart repo minor version in `bootc_dev/bootc_rhel10` (e.g. both 10.1); a mismatch (e.g. stage2 at 10.1 while the guest registers as 10.2) may still work but is not guaranteed.
 - **Registry:** After changing Satellite registry credentials, regenerate `bootc_registry_auth_b64` and mark the parameter hidden.
-
----
-
-
-
-## Quick reference
-
-
-| Object             | Name / id                        |
-| ------------------ | -------------------------------- |
-| Host group         | `hg_x86_64_bootc_rhel10_vm` (34) |
-| Provision template | `kickstart_bootc_rhel10` (289)   |
-| PXE (OS default)   | SOE Kickstart Default PXELinux   |
-| Container repo     | `bootc_rhel10` (901)             |
-| Kickstart repo     | BaseOS Kickstart 10.1 (911)      |
-| Satellite          | `satellite1.savage.test`         |
-| Hypervisor         | `nuc`                            |
-
 
