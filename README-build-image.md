@@ -93,6 +93,8 @@ podman build -t satellite1.savage.test/default_organization/bootc_images/bootc_r
 
 [14.3.4. Pushing container images to Satellite](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#pushing-container-images-to-satellite)
 
+Build and push use Satellite’s **Library push path**: `<fqdn>/<org_label>/<product_label>/<repo_label>:<tag>` (here `default_organization/bootc_images/bootc_rhel10`). That lands the image in the library repository. **Hosts and provisioning do not pull from this path** once the image is in a content view—after publish and promote they use a **CV/LCE-specific** registry path (see [README-deploy-host.md](README-deploy-host.md)). Copy the exact pull path from **Content → Container image tags** (pullable paths) for your target lifecycle environment.
+
 ```bash
 # podman push My_Container_Image_ID satellite.example.com/My_Organization_Label/My_Product_Label/My_Repository_Name[:My_Tag]
 podman push satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:20261019 .

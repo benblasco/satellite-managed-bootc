@@ -75,6 +75,29 @@ flowchart LR
 
 Sync the repositories, publish the content view, and promote it to the target lifecycle environment (for example **`bootc_dev`**) before creating hosts.
 
+### Container registry pullable paths (CV / LCE)
+
+Images are **pushed** to Satellite’s Library path (`<fqdn>/<org_label>/<product_label>/<repo_label>:<tag>` — see [README-build-image.md](README-build-image.md)). **Provisioning and `podman pull` on deploy hosts must use the path for the published content view in the target lifecycle environment**, which honors CV tag filters and promotion.
+
+Satellite 6.19 documents the container registry in [Chapter 14 — Managing container images](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management) ([pulling images](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#pulling-container-images-from-satellite), [registry name patterns per LCE](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#configuring-container-registry-name-patterns-for-a-lifecycle-environment)). The redesigned **Container image tags** UI (release notes: [SAT-23851](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html-single/release_notes/index)) shows each tag’s **pullable path** per content view and lifecycle environment.
+
+**How to find the path for a tag** (example tag `20261022`, deploy LCE `bootc_dev`, CV `bootc_rhel10`):
+
+1. **Content → Content types → Container image tags**
+2. Open the tag (e.g. **`20261022`**)
+3. Expand **CVs, lifecycle environments, pullable paths**, or from **Content → Container images → Synced** use **View pullable paths** on the tag
+4. Copy the **Pullable path** for the row that matches **`bootc_dev`** and **`bootc_rhel10`** (append `:<tag>` if the UI shows path without tag)
+
+With default registry naming (no custom pattern on `bootc_dev`), the path usually looks like:
+
+```text
+satellite1.savage.test/default_organization/bootc_dev/bootc_rhel10/bootc_images/bootc_rhel10:<tag>
+```
+
+Set host parameter **`ostreecontainer`** to that full reference (no `docker://` prefix). If an LCE defines a **Registry name pattern**, use the pullable path from the UI—do not assume the five-segment default.
+
+Promote the CV version to **`bootc_dev`** before provisioning. If you promote one version to **multiple** lifecycle environments in a single action, verify pullable paths exist for **each** target LCE; re-promote to an LCE alone if pulls fail with `name unknown` despite a successful promotion in the UI. This is likely due to a bug in Satellite as at 20261028.
+
 ---
 
 ## Create the activation key
@@ -143,9 +166,9 @@ Host group values
 | Item           | Value                                                                                                           |
 | -------------- | --------------------------------------------------------------------------------------------------------------- |
 | Product        | `bootc_images`                                                                                                  |
-| Repository     | `bootc_rhel10` (docker / container, repo id **901**)                                                            |
-| Published path | `satellite1.savage.test/default_organization/bootc_images/bootc_rhel10`                                         |
-| Image tag      | Set on host group parameter `ostreecontainer` (e.g. `20261019`); update when you promote a new tag in Satellite |
+| Repository     | `bootc_rhel10` (docker / container)                                                                             |
+| Pull path (CV/LCE) | `satellite1.savage.test/default_organization/bootc_dev/bootc_rhel10/bootc_images/bootc_rhel10` — confirm in **Container image tags → pullable paths** for `bootc_dev` / `bootc_rhel10` |
+| Image tag      | Suffix on `ostreecontainer` (e.g. `:20261022`); update when you publish/promote a new tag in Satellite |
 
   ![Create host group](satellite-bootc-images/host_group_create.png)
   ![Associate host group with OSs](satellite-bootc-images/host_group_os.png)
@@ -161,7 +184,7 @@ These parameters are injected into the kickstart to fit this particular environm
 
 | Parameter                         | Type   | Purpose                                                                                                                                                                               |
 | --------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ostreecontainer`                 | string | Container image reference for `ostreecontainer --url` — **plain reference, no** `docker://` **prefix**: `satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:<tag>` |
+| `ostreecontainer`                 | string | Full pullable path for `ostreecontainer --url` — **plain reference, no** `docker://` **prefix**. Use the CV/LCE path from **Container image tags → pullable paths** (not the Library push path). Example: `satellite1.savage.test/default_organization/bootc_dev/bootc_rhel10/bootc_images/bootc_rhel10:<tag>` |
 | `kickstart_kernel_custom_options` | json   | Kernel options appended by PXE templates; must include `inst.stage2` pointing at the kickstart tree in **your** CV/LE (not Library). Example below.                                   |
 | `bootc_registry_auth_b64`         | string | Base64-encoded `username:password` for Satellite registry login during install; enables `%pre` in kickstart. Mark as **Hidden value** in the UI.                                      |
 | `kt_activation_keys`              | string | `bootc_rhel10_dev`                                                                                                                                                                    |
@@ -192,10 +215,10 @@ Pre-flight from a host that trusts the Satellite CA:
 
 ```bash
 podman login satellite1.savage.test
-podman pull satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:<tag>
+podman pull satellite1.savage.test/default_organization/bootc_dev/bootc_rhel10/bootc_images/bootc_rhel10:<tag>
 ```
 
-Use the same user/password and image reference as in the host group parameters.
+Use the same user/password and **pullable path** (including tag) as in the host group `ostreecontainer` parameter.
 
 ---
 
@@ -221,7 +244,7 @@ Use the same user/password and image reference as in the host group parameters.
   ![VM network parameters](satellite-bootc-images/bootc_create_vm_network.png)
 2. **Verify rendered kickstart** on the host **Templates** tab, or from Satellite:
    `GET /unattended/provision?static=1&token=<host-token>`  
-   Confirm: `ostreecontainer --url`, optional `%pre`, network stanza, no `url`/`repo` for install source.
+   Confirm: `ostreecontainer --url` uses the **CV/LCE pullable path** (not `.../bootc_images/bootc_rhel10` Library push path), optional `%pre`, network stanza, no `url`/`repo` for install source.
 3. **Verify PXE** on Satellite: inspect `/var/lib/tftpboot/pxelinux.cfg/01-<mac>` — **APPEND** should include `inst.ks=...` and `inst.stage2=...bootc_dev/bootc_rhel10...`.
 4. Power on the host and wait for the install to finish.
 5. **On the guest:** `bootc status` — booted image should match the `ostreecontainer` host parameter.
@@ -261,8 +284,8 @@ Use this workflow after you build and `podman push` a new tag (see [README-build
 
 1. **Sync** the `bootc_rhel10` container repository in Satellite if the new tag is not visible yet (**Content → Products → bootc_images → bootc_rhel10 → Sync**).
 2. If the deploy content view **`bootc_rhel10`** uses a **tag filter**, add or adjust the filter so the new tag is included, then **publish** a new content view version.
-3. **Promote** that version to lifecycle environment **`bootc_dev`** (the LE used by the bootc host group).
-4. On host group **`hg_x86_64_bootc_rhel10_vm`**, update the **`ostreecontainer`** parameter to the full image reference including the new tag, for example `satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:20261019`. Note: This should be parametrised to make this step redundant.
+3. **Promote** that version to lifecycle environment **`bootc_dev`** (the LE used by the bootc host group). Promote to each target LCE separately if pullable paths are missing after a bulk promote.
+4. Copy the **pullable path** for the new tag from **Content → Content types → Container image tags** (row for `bootc_dev` / `bootc_rhel10`). On host group **`hg_x86_64_bootc_rhel10_vm`**, set **`ostreecontainer`** to that path including the tag, for example `satellite1.savage.test/default_organization/bootc_dev/bootc_rhel10/bootc_images/bootc_rhel10:20261022`.
 5. **Pre-flight** (optional): from a host that trusts the Satellite CA, `podman pull` the same reference you set on `ostreecontainer`.
 6. **Provision** new hosts (or rebuild) so Anaconda pulls the promoted tag. Existing guests already installed are not changed until you re-deploy or use bootc upgrade flows outside this guide.
 
