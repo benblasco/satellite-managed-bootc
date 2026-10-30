@@ -8,7 +8,7 @@ The process to follow is:
 2. Create a registry within Satellite to host the built images
 3. Deploy and configure a build host
 
-Once the above is complete, the image builds can commence; see [README-build-image.md](README-build-image.md).
+Once the above is complete, the image builds can commence; see [README.build-image.md](README.build-image.md).
 
 ---
 
@@ -96,7 +96,7 @@ Note: The versions of the packages installed will be in line with what is made a
 
 ## Configure the build host to trust Satellite and the container registry
 
-Complete these steps on the build host before following [README-build-image.md](README-build-image.md).
+Complete these steps on the build host before following [README.build-image.md](README.build-image.md).
 
 ### Trust Satellite (TLS)
 

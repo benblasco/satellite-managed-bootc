@@ -15,7 +15,7 @@ Most of the background and concept came from Ian Ballou's great article: [Provis
 | Organization label          | `default_organization`          | Container image paths (`.../default_organization/...`)                 |
 | DNS domain                  | `savage.test`                   | Host FQDNs, provisioning network                                       |
 | Libvirt compute resource    | `nuc`                           | Host group, VNC on `nuc.lan`                                           |
-| Build-host lifecycle (SOE)  | SOE10 `Development`             | [README-build-environment-setup.md](README-build-environment-setup.md) |
+| Build-host lifecycle (SOE)  | SOE10 `Development`             | [README.build-environment-setup.md](README.build-environment-setup.md) |
 | Deploy lifecycle / CV       | `bootc_dev` / `bootc_rhel10`    | Host group, `inst.stage2`, activation key                              |
 | Activation key              | `bootc_rhel10_dev`              | Host group parameter `kt_activation_keys`                              |
 | Host group                  | `hg_x86_64_bootc_rhel10_vm`     | Provisioning entry point                                               |
@@ -28,6 +28,10 @@ Container registry paths use your Satellite **organization label** (here `defaul
 
 ## Documentation (run in order)
 
-1. [README-build-environment-setup.md](README-build-environment-setup.md) — Prepare Satellite (sync upstream bootc content, custom registry product/repo) and deploy a build host with the right lifecycle environment and content view.
-2. [README-build-image.md](README-build-image.md) — On the build host, construct and push a customised bootc container image to Satellite's registry.
-3. [README-deploy-host.md](README-deploy-host.md) — Publish bootc image content for provisioning, configure host groups and kickstart templates, and network-provision bootc VMs.
+1. [README.build-environment-setup.md](README.build-environment-setup.md) — Prepare Satellite (sync upstream bootc content, custom registry product/repo) and deploy a build host with the right lifecycle environment and content view.
+2. [README.build-image.md](README.build-image.md) — On the build host, construct and push a customised bootc container image to Satellite's registry.
+3. [README.deploy-host.md](README.deploy-host.md) — Publish bootc image content for provisioning, configure host groups and kickstart templates, and network-provision bootc VMs.
+
+### Reference
+
+4. [README.lifecycle-management.md](README.lifecycle-management.md) — Dev/prod bootc image promotion via tag filters (immutable tags, publish/promote cycle).

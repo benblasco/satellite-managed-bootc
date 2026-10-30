@@ -77,7 +77,7 @@ Sync the repositories, publish the content view, and promote it to the target li
 
 ### Container registry pullable paths (CV / LCE)
 
-Images are **pushed** to Satellite’s Library path (`<fqdn>/<org_label>/<product_label>/<repo_label>:<tag>` — see [README-build-image.md](README-build-image.md)). **Provisioning and `podman pull` on deploy hosts must use the path for the published content view in the target lifecycle environment**, which honors CV tag filters and promotion.
+Images are **pushed** to Satellite’s Library path (`<fqdn>/<org_label>/<product_label>/<repo_label>:<tag>` — see [README.build-image.md](README.build-image.md)). **Provisioning and `podman pull` on deploy hosts must use the path for the published content view in the target lifecycle environment**, which honors CV tag filters and promotion.
 
 Satellite 6.19 documents the container registry in [Chapter 14 — Managing container images](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management) ([pulling images](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#pulling-container-images-from-satellite), [registry name patterns per LCE](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#configuring-container-registry-name-patterns-for-a-lifecycle-environment)). The redesigned **Container image tags** UI (release notes: [SAT-23851](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html-single/release_notes/index)) shows each tag’s **pullable path** per content view and lifecycle environment.
 
@@ -280,7 +280,7 @@ A blank VNC screen during early dracut or quiet install is **normal**. Use scree
 
 ### Publish and promote container images via image tags
 
-Use this workflow after you build and `podman push` a new tag (see [README-build-image.md](README-build-image.md)).
+Use this workflow after you build and `podman push` a new tag (see [README.build-image.md](README.build-image.md)).
 
 1. **Sync** the `bootc_rhel10` container repository in Satellite if the new tag is not visible yet (**Content → Products → bootc_images → bootc_rhel10 → Sync**).
 2. If the deploy content view **`bootc_rhel10`** uses a **tag filter**, add or adjust the filter so the new tag is included, then **publish** a new content view version.

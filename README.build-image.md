@@ -1,6 +1,6 @@
 # Build the customised bootc container image
 
-Once the [environment setup](README-build-environment-setup.md) is complete (including container tools, Satellite CA trust, and `containers-auth.json` on the build host), image builds can take place.
+Once the [environment setup](README.build-environment-setup.md) is complete (including container tools, Satellite CA trust, and `containers-auth.json` on the build host), image builds can take place.
 
 All actions below take place on the **build host**.
 
@@ -13,7 +13,7 @@ Before building, gather these files in the directory that contains your Containe
 | File | Purpose |
 | ---- | ------- |
 | `katello-server-ca.crt` | Satellite CA copied into the image (e.g. `curl -o katello-server-ca.crt http://satellite1.savage.test/pub/katello-server-ca.crt`) |
-| `containers-auth.json` | Registry credentials baked into the image at `/etc/ostree/auth.json` (created during [environment setup](README-build-environment-setup.md)) |
+| `containers-auth.json` | Registry credentials baked into the image at `/etc/ostree/auth.json` (created during [environment setup](README.build-environment-setup.md)) |
 | `id_rsa.pub` | SSH public key for root login in the image |
 | `redhat.repo` (or equivalent) | Yum/DNF repo definitions used inside the image build (your Satellite subscription layout) |
 
@@ -93,14 +93,14 @@ podman build -t satellite1.savage.test/default_organization/bootc_images/bootc_r
 
 [14.3.4. Pushing container images to Satellite](https://docs.redhat.com/en/documentation/red_hat_satellite/6.19/html/managing_content/managing_container_images_content-management#pushing-container-images-to-satellite)
 
-Build and push use Satellite’s **Library push path**: `<fqdn>/<org_label>/<product_label>/<repo_label>:<tag>` (here `default_organization/bootc_images/bootc_rhel10`). That lands the image in the library repository. **Hosts and provisioning do not pull from this path** once the image is in a content view—after publish and promote they use a **CV/LCE-specific** registry path (see [README-deploy-host.md](README-deploy-host.md)). Copy the exact pull path from **Content → Container image tags** (pullable paths) for your target lifecycle environment.
+Build and push use Satellite’s **Library push path**: `<fqdn>/<org_label>/<product_label>/<repo_label>:<tag>` (here `default_organization/bootc_images/bootc_rhel10`). That lands the image in the library repository. **Hosts and provisioning do not pull from this path** once the image is in a content view—after publish and promote they use a **CV/LCE-specific** registry path (see [README.deploy-host.md](README.deploy-host.md)). Copy the exact pull path from **Content → Container image tags** (pullable paths) for your target lifecycle environment.
 
 ```bash
 # podman push My_Container_Image_ID satellite.example.com/My_Organization_Label/My_Product_Label/My_Repository_Name[:My_Tag]
 podman push satellite1.savage.test/default_organization/bootc_images/bootc_rhel10:20261019 .
 ```
 
-After push, follow [Publish and promote container images via image tags](README-deploy-host.md#publish-and-promote-container-images-via-image-tags) in the deploy guide before provisioning VMs with the new tag.
+After push, follow [Publish and promote container images via image tags](README.deploy-host.md#publish-and-promote-container-images-via-image-tags) in the deploy guide before provisioning VMs with the new tag.
 
 ## Verify the image in Satellite
 
