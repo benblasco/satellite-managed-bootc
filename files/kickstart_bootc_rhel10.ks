@@ -73,8 +73,8 @@ skipx
 reboot
 # --- Post-Install Scripts ---
 <%#
-  This section injects SSH keys for Foreman, registers the system,
-  and signals the build is done.
+  Register with Satellite, enroll in IDM when the host has a realm,
+  install Remote Execution keys, then signal Foreman that the build finished.
 %>
 %post
 exec < /dev/tty3 > /dev/tty4
@@ -99,6 +99,15 @@ fi
 # nslookup cdn.redhat.com || echo "WARNING: Cannot resolve cdn.redhat.com"
 # echo "=========================="
 <%= snippet 'redhat_register' -%>
+subscription-manager refresh
+subscription-manager repos
+
+<% if @host.realm && (@host.realm.realm_type == 'FreeIPA' || @host.realm.realm_type == 'Red Hat Identity Management') -%>
+<%= snippet 'freeipa_register' -%>
+<% else -%>
+echo "Skipping freeipa_register: host has no IDM/FreeIPA realm assigned in Foreman"
+<% end -%>
+
 <%= snippet('remote_execution_ssh_keys') %>
 touch /tmp/foreman_built
 chvt 1
